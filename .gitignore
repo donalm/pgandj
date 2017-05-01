@@ -87,3 +87,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Curse you vim. curse you to hell!
+.*.swp
