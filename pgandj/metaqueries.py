@@ -26,39 +26,6 @@ order by
 
 
 queries["list_foreign_keys"] = """
-SELECT "table",
-       array_agg(columns) AS columns,
-       "foreign table",
-       array_agg("foreign columns") AS "foreign columns"
-  FROM ( SELECT conrelid::regclass AS "table",
-                a.attname as columns,
-                confrelid::regclass as "foreign table",
-                af.attname as "foreign columns"
-           FROM pg_attribute AS af,
-                pg_attribute AS a,
-                ( SELECT conrelid,
-                         confrelid,
-                         conkey[i] AS conkey,
-                         confkey[i] as confkey
-                    FROM ( SELECT conrelid,
-                                  confrelid,
-                                  conkey,
-                                  confkey,
-                                  generate_series(1, array_upper(conkey, 1)) AS i
-                             FROM pg_constraint
-              WHERE contype = 'f'
-                  ) AS ss
-                ) AS ss2
-          WHERE af.attnum = confkey
-            AND af.attrelid = confrelid
-            AND a.attnum = conkey
-            AND a.attrelid = conrelid
-       ) AS ss3
-  GROUP BY "table",
-           "foreign table"
-"""
-
-queries["list_foreign_keys"] = """
 SELECT
     tc.constraint_catalog as database_name,
     tc.constraint_name,
