@@ -4,15 +4,17 @@
 from twisted.python import log
 from twisted.internet import defer
 from collections import OrderedDict
+from collections import namedtuple
 
 from . import database_pool
 from . import metaqueries
 from . import log
 
 
-logger = log.get_logger()
 
 class Inspect(object):
+    tbltpl = namedtuple('table', ['table_name'])
+    logger = log.get_logger()
     def __init__(self, args):
         credentials = {
             "port": args.port,
@@ -28,8 +30,16 @@ class Inspect(object):
     def database(self):
         return self.ready.addCallback(self.get_tables)
 
+    def table(self, table):
+        df = self.ready.addCallback(self.get_tables)
+        df.addCallback(self.return_table_data, table)
+        return df
+
+    def return_table_data(self, result, table):
+        return result[table]
+
     def get_tables(self, *args):
-        logger.error("get_tables")
+        self.logger.debug("get_tables")
         query = metaqueries.queries["list_tables"]
         df = self.pool.runQuery(query)
         df.addCallback(self.parse_tables)
@@ -54,7 +64,7 @@ class Inspect(object):
         return dfl
 
     def get_columns(self, table_name, *args):
-        logger.error("get_columns")
+        self.logger.debug("get_columns")
         query = metaqueries.queries["list_table_columns"]
         return self.pool.runQuery(query, (table_name,))
 
@@ -73,7 +83,7 @@ class Inspect(object):
         return table_name
 
     def get_indices(self, table_name, *args):
-        logger.error("get_indices: %s" % (table_name,))
+        self.logger.debug("get_indices: %s" % (table_name,))
         query = metaqueries.queries["list_table_indices"]
         return self.pool.runQuery(query, (table_name,))
 
@@ -87,14 +97,11 @@ class Inspect(object):
         return table_name
 
     def get_foreign_keys(self, table_name):
-        logger.error("get_foreign_keys")
+        self.logger.debug("get_foreign_keys")
         query = metaqueries.queries["list_foreign_keys"]
-        print(table_name)
-        print(query)
         return self.pool.runQuery(query, (table_name,))
 
     def parse_foreign_keys(self, results):
-        print(results)
         for result in results:
             self.result[result.table_name]["fields"][result.column_name]["references_foreign_key"] = (result.foreign_table_name, result.foreign_column_name,)
             try:
