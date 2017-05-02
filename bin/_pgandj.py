@@ -48,7 +48,11 @@ def stop(schema, args):
         sys.exit(1)
 
 def begin(args):
-    inspect = pgandj.Inspect(args)
+    inspect = pgandj.Inspect(args.database,
+                             port=args.port,
+                             host=args.host,
+                             password=args.password,
+                             user=args.username)
     df = inspect.database()
     df.addErrback(eb)
     df.addBoth(stop, args)

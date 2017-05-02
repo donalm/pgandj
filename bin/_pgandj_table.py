@@ -16,8 +16,8 @@ logger = pgandj.get_logger()
 def eb(f):
     logger.error(f.getBriefTraceback())
 
-def stop(schema, args, t):
-    print time.time() - t
+def stop(schema, args, start_time):
+    logger.error("complete in %s seconds" % (time.time() - start_time,))
     reactor.stop()
     data = json.dumps(schema, indent=4, sort_keys=False, separators=(',', ': '))
 
@@ -50,11 +50,15 @@ def stop(schema, args, t):
         sys.exit(1)
 
 def begin(args):
-    t = time.time()
-    inspect = pgandj.Inspect(args)
+    start_time = time.time()
+    inspect = pgandj.Inspect(args.database,
+                             port=args.port,
+                             host=args.host,
+                             password=args.password,
+                             user=args.username)
     df = inspect.table(args.table)
     df.addErrback(eb)
-    df.addBoth(stop, args, t)
+    df.addBoth(stop, args, start_time)
 
 def main():
     parser = argparse.ArgumentParser(

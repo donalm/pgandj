@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import time
 
 from twisted.python import log
 from twisted.internet import defer
@@ -15,17 +16,20 @@ from . import log
 class Inspect(object):
     tbltpl = namedtuple('table', ['table_name'])
     logger = log.get_logger()
-    def __init__(self, args):
+    def __init__(self, database, port=5432, host='127.0.0.1', password=None, user=None):
         credentials = {
-            "port": args.port,
-            "host": args.host,
-            "password": args.password,
-            "user": args.username,
-            "database": args.database
+            "port": port,
+            "host": host,
+            "password": password,
+            "user": user,
+            "database": database
         }
         self.pool = database_pool.Pool(credentials)
         self.ready = self.pool.start()
         self.result = {}
+
+    def eb(self, f):
+        self.logger.error(f.getBriefTraceback())
 
     def database(self):
         return self.ready.addCallback(self.get_tables)
@@ -53,7 +57,7 @@ class Inspect(object):
             self.result[table_name] = {"fields":OrderedDict(),
                                   "indices":OrderedDict()}
             df = self.get_columns(table_name)
-            df.addCallback(self.show_columns, table_name)
+            df.addCallback(self.parse_columns, table_name)
             df.addCallback(self.get_indices)
             df.addCallback(self.parse_indices, table_name)
             df.addCallback(self.get_foreign_keys)
@@ -68,7 +72,7 @@ class Inspect(object):
         query = metaqueries.queries["list_table_columns"]
         return self.pool.runQuery(query, (table_name,))
 
-    def show_columns(self, results, table_name):
+    def parse_columns(self, results, table_name):
         nullable = {"YES":True, "NO":False}
         for column in results:
             val = {'name': column.column_name,
